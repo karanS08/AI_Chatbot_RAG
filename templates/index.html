@@ -32,6 +32,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            overflow-x: hidden; /* Prevent horizontal scroll */
             transition: background-color 0.3s ease, color 0.3s ease;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
@@ -41,6 +42,37 @@
         body.dark-mode {
             background-color: #1a1a1a;
             color: #e0e0e0;
+        }
+
+        /* WhatsApp-like chat header - ENLARGED */
+        .chat-header {
+            background-color: #075E54;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px;
+            flex-shrink: 0;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+            min-height: 80px;
+        }
+        body.dark-mode .chat-header { background-color: #0b3f39; }
+        .chat-header-left { display: flex; align-items: center; gap: 14px; }
+        .chat-title { font-size: 22px; font-weight: 700; line-height: 1.3; }
+        .chat-subtitle { font-size: 14px; opacity: 0.9; }
+        .header-actions { display: flex; align-items: center; gap: 12px; }
+        .chat-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #fff;
+            color: #075E54;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+            flex-shrink: 0;
         }
 
         /* 1. TOP NAVIGATION HEADER */
@@ -150,13 +182,13 @@
 
         .language-selector-btn {
             background-color: #f0f0f0;
-            border: 1px solid #ddd;
-            padding: 10px 20px;
-            font-size: 16px;
+            border: 2px solid #ddd;
+            padding: 12px 24px;
+            font-size: 18px;
             font-weight: 600;
             color: #333;
             cursor: pointer;
-            border-radius: 25px;
+            border-radius: 30px;
             transition: all 0.3s ease;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
@@ -179,15 +211,15 @@
         /* Dark Mode Toggle Button */
         .dark-mode-toggle {
             background-color: #f0f0f0;
-            border: 1px solid #ddd;
-            padding: 10px 14px;
-            font-size: 24px;
+            border: 2px solid #ddd;
+            padding: 12px 16px;
+            font-size: 28px;
             cursor: pointer;
             border-radius: 50%;
             transition: all 0.3s ease;
-            margin-right: 10px;
-            width: 48px;
-            height: 48px;
+            margin-right: 0;
+            width: 56px;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -216,7 +248,10 @@
             overflow-x: hidden;
             padding: 20px;
             padding-bottom: 20px;
-            background-color: #f5f5f5;
+            background-color: #ece5dd;
+            background-image: radial-gradient(#d1d7db 1px, transparent 1px);
+            background-size: 12px 12px;
+            background-position: 0 0, 6px 6px;
             display: flex;
             flex-direction: column;
             transition: background-color 0.3s ease;
@@ -246,7 +281,8 @@
         }
 
         body.dark-mode .chat-area {
-            background-color: #1a1a1a;
+            background-color: #121b22;
+            background-image: none;
         }
 
         body.dark-mode .chat-area::-webkit-scrollbar-track {
@@ -279,15 +315,7 @@
             width: 100%;
         }
 
-        .msg {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            max-width: 70%;
-            animation: slideIn 0.3s ease-out;
-            margin-left: auto;
-            margin-right: auto;
-        }
+        .msg { display: flex; margin: 6px 0; }
 
         @keyframes slideIn {
             from {
@@ -300,16 +328,8 @@
             }
         }
 
-        .msg.user {
-            align-self: center;
-            flex-direction: row-reverse;
-            margin-right: 15%;
-        }
-
-        .msg.bot {
-            align-self: center;
-            margin-left: 15%;
-        }
+        .msg.user { justify-content: flex-end; }
+        .msg.bot { justify-content: flex-start; }
 
         .msg-avatar {
             width: 36px;
@@ -333,13 +353,15 @@
         }
 
         .msg-bubble {
-            background-color: white;
-            padding: 12px 16px;
-            border-radius: 18px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            max-width: 80%;
+            padding: 12px 14px;
+            border-radius: 14px;
             line-height: 1.6;
             word-wrap: break-word;
-            transition: all 0.3s ease;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            position: relative;
+            font-size: 16px;
         }
 
         .msg-bubble p {
@@ -374,16 +396,8 @@
             margin-top: 0;
         }
 
-        .msg.user .msg-bubble {
-            background-color: #2e7d32;
-            color: white;
-        }
-
-        .msg.bot .msg-bubble {
-            background-color: white;
-            color: #333;
-            text-align: left;
-        }
+        .msg.user .msg-bubble { background-color: #dcf8c6; color: #111; border-top-right-radius: 2px; }
+        .msg.bot .msg-bubble { background-color: #ffffff; color: #111; border-top-left-radius: 2px; }
 
         body.dark-mode .msg.bot .msg-bubble {
             background-color: #2d2d2d;
@@ -404,16 +418,21 @@
             background-color: #1b5e20;
         }
 
-        .msg.error .msg-bubble {
-            background-color: #d32f2f;
-            color: white;
+        .msg.error .msg-bubble { background-color: #ffdede; color: #8a0000; }
+
+        .msg-time {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-left: 8px;
+            white-space: nowrap;
+            float: right;
         }
 
         /* 3. FLOATING INPUT BAR (Bottom Section) */
         .floating-input-container {
             position: sticky;
             bottom: 0;
-            background-color: #f5f5f5;
+            background-color: #ece5dd;
             padding: 20px;
             display: flex;
             justify-content: center;
@@ -428,11 +447,11 @@
         .pill-input-bar {
             display: flex;
             align-items: center;
-            gap: 12px;
-            background-color: white;
+            gap: 14px;
+            background-color: #ffffff;
             border: 2px solid #ddd;
-            border-radius: 50px;
-            padding: 12px 20px;
+            border-radius: 999px;
+            padding: 14px 20px;
             max-width: 800px;
             width: 100%;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -455,19 +474,54 @@
             box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
         }
 
+        /* Compact image preview inside input bar */
+        #imagePreviewBar {
+            flex-shrink: 0;
+        }
+
+        body.dark-mode #chatImagePreview {
+            border-color: #555;
+        }
+
+        #removeImageBtn:hover {
+            background-color: #ff3333 !important;
+            transform: scale(1.1);
+        }
+
+        body.dark-mode #removeImageBtn {
+            background-color: #ff5555;
+        }
+
+        body.dark-mode #removeImageBtn:hover {
+            background-color: #ff3333 !important;
+        }
+
+        /* Image in chat bubble */
+        .msg-image {
+            max-width: 100%;
+            border-radius: 12px;
+            margin-top: 8px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+        body.dark-mode .msg-image {
+            border-color: #555;
+        }
+
         .pill-btn {
             background: none;
             border: none;
-            font-size: 24px;
+            font-size: 28px;
             cursor: pointer;
             color: #666;
-            padding: 5px;
+            padding: 10px;
             transition: all 0.3s ease;
             flex-shrink: 0;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
-            min-width: 44px;
-            min-height: 44px;
+            min-width: 50px;
+            min-height: 50px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -491,20 +545,20 @@
         }
 
         .send-btn {
-            background-color: #2e7d32 !important;
+            background-color: #25D366 !important;
             color: white !important;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 24px;
             padding: 0;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
-            min-width: 44px;
-            min-height: 44px;
+            min-width: 50px;
+            min-height: 50px;
         }
 
         .send-btn:hover {
@@ -536,11 +590,11 @@
             flex-grow: 1;
             border: none;
             background: none;
-            font-size: 16px;
+            font-size: 20px;
             color: #333;
             resize: none;
-            min-height: 24px;
-            max-height: 120px;
+            min-height: 32px;
+            max-height: 180px;
             overflow-y: auto;
             font-family: inherit;
             transition: color 0.3s ease;
@@ -568,15 +622,16 @@
         .loading-indicator {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 15px;
-            margin: 10px auto;
+            gap: 12px;
+            padding: 18px;
+            margin: 12px auto;
             background-color: white;
-            border-radius: 18px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             max-width: 80%;
             transition: all 0.3s ease;
             align-self: center;
+            font-size: 17px;
         }
 
         body.dark-mode .loading-indicator {
@@ -729,6 +784,11 @@
             .msg.bot {
                 margin-left: 10%;
             }
+
+            /* Image preview stays compact on tablet */
+            .msg-image {
+                max-width: 250px !important;
+            }
         }
 
         /* Mobile Responsive */
@@ -736,6 +796,33 @@
             body {
                 height: 100vh;
                 height: 100dvh;
+            }
+
+            .chat-header {
+                padding: 14px 16px;
+                min-height: 68px;
+            }
+
+            .chat-header-left {
+                gap: 10px;
+            }
+
+            .chat-title {
+                font-size: 18px;
+            }
+
+            .chat-subtitle {
+                font-size: 12px;
+            }
+
+            .chat-avatar {
+                width: 42px;
+                height: 42px;
+                font-size: 18px;
+            }
+
+            .header-actions {
+                gap: 8px;
             }
 
             .header-top-row {
@@ -767,15 +854,22 @@
             }
 
             .dark-mode-toggle {
-                font-size: 20px;
-                width: 40px;
-                height: 40px;
-                padding: 8px 10px;
+                font-size: 24px;
+                width: 48px;
+                height: 48px;
+                padding: 10px 12px;
             }
 
             .language-selector-btn {
-                padding: 6px 12px;
-                font-size: 13px;
+                padding: 8px 16px;
+                font-size: 15px;
+            }
+
+            .pill-btn {
+                font-size: 24px;
+                min-width: 44px;
+                min-height: 44px;
+                padding: 8px;
             }
 
             .chat-area {
@@ -809,37 +903,84 @@
 
             .msg-bubble {
                 padding: 10px 14px;
-                font-size: 14px;
+                font-size: 15px;
             }
 
             .floating-input-container {
                 padding: 15px 10px;
             }
 
-            .pill-input-bar {
-                max-width: 100%;
-                padding: 10px 15px;
-                gap: 8px;
+            /* Image preview stays compact on mobile */
+            .msg-image {
+                max-width: 200px !important;
             }
 
-            .pill-btn {
-                font-size: 20px;
-                padding: 3px;
+            .pill-input-bar {
+                max-width: 100%;
+                padding: 12px 16px;
+                gap: 10px;
+                border: 1px solid #ddd;
             }
 
             .send-btn {
-                width: 36px;
-                height: 36px;
-                font-size: 18px;
+                width: 44px;
+                height: 44px;
+                font-size: 20px;
+                min-width: 44px;
+                min-height: 44px;
             }
 
             #question {
-                font-size: 14px;
+                font-size: 17px;
+                min-height: 28px;
+            }
+
+            /* Modal on mobile */
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+
+            .modal-content h2 {
+                font-size: 22px;
+            }
+
+            .modal-content p {
+                font-size: 16px;
+            }
+
+            #modalLanguageSelect {
+                font-size: 16px;
+                padding: 10px;
+            }
+
+            #saveLanguageBtn {
+                font-size: 16px;
+                padding: 10px 20px;
             }
         }
 
         /* Small Mobile Responsive */
         @media (max-width: 480px) {
+            .chat-header {
+                padding: 12px 14px;
+                min-height: 62px;
+            }
+
+            .chat-title {
+                font-size: 16px;
+            }
+
+            .chat-subtitle {
+                font-size: 11px;
+            }
+
+            .chat-avatar {
+                width: 38px;
+                height: 38px;
+                font-size: 16px;
+            }
+
             .app-title {
                 font-size: 16px;
             }
@@ -850,14 +991,20 @@
             }
 
             .dark-mode-toggle {
-                width: 36px;
-                height: 36px;
-                font-size: 18px;
+                width: 44px;
+                height: 44px;
+                font-size: 22px;
             }
 
             .language-selector-btn {
-                padding: 5px 10px;
-                font-size: 12px;
+                padding: 7px 14px;
+                font-size: 14px;
+            }
+
+            .pill-btn {
+                font-size: 22px;
+                min-width: 40px;
+                min-height: 40px;
             }
 
             .msg {
@@ -882,27 +1029,65 @@
             }
 
             .msg-bubble {
-                padding: 8px 12px;
-                font-size: 13px;
+                padding: 9px 12px;
+                font-size: 14px;
+            }
+
+            /* Image preview stays compact on small mobile */
+            .msg-image {
+                max-width: 180px !important;
             }
 
             .pill-input-bar {
-                padding: 8px 12px;
-                gap: 6px;
-            }
-
-            .pill-btn {
-                font-size: 18px;
+                padding: 10px 14px;
+                gap: 8px;
             }
 
             .send-btn {
-                width: 32px;
-                height: 32px;
-                font-size: 16px;
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+                min-width: 40px;
+                min-height: 40px;
             }
 
             #question {
-                font-size: 13px;
+                font-size: 16px;
+                min-height: 26px;
+            }
+
+            /* Modal on small mobile */
+            .modal-content {
+                width: 96%;
+                padding: 18px;
+                max-width: none;
+            }
+
+            .modal-content h2 {
+                font-size: 20px;
+                margin-bottom: 12px;
+            }
+
+            .modal-content p {
+                font-size: 14px;
+                margin-bottom: 15px;
+            }
+
+            #modalLanguageSelect {
+                font-size: 15px;
+                padding: 9px;
+            }
+
+            #saveLanguageBtn {
+                font-size: 15px;
+                padding: 9px 18px;
+            }
+
+            /* Ensure loading indicator fits */
+            .loading-indicator {
+                font-size: 15px;
+                padding: 14px;
+                max-width: 90%;
             }
         }
 
@@ -947,21 +1132,19 @@
         </div>
     </div>
 
-    <!-- 1. TOP NAVIGATION HEADER -->
-    <div class="top-header">
-        <div class="header-top-row">
-            <button class="hamburger-btn" id="hamburgerBtn" title="Menu">☰</button>
-            <div class="header-tabs">
-                <button class="header-tab" id="uploadsTab">UPLOADS</button>
-                <button class="header-tab" id="newChatTab">NEW CHAT</button>
+    <!-- Header: WhatsApp-like chat bar -->
+    <div class="chat-header">
+        <div class="chat-header-left">
+            <div class="chat-avatar">SA</div>
+            <div>
+                <div class="chat-title">Sugarcane Advisor</div>
+                <div class="chat-subtitle">Farmer support • India</div>
             </div>
         </div>
-        <div class="header-second-row">
-            <h1 class="app-title">SUGARCANE ADVISOR</h1>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <button class="dark-mode-toggle" id="darkModeToggle" title="Toggle Dark Mode">🌙</button>
-                <button class="language-selector-btn" id="switchLanguageBtn" title="Language">EN</button>
-            </div>
+        <div class="header-actions">
+            <button class="pill-btn" id="helpBtn" title="Help / Tips">❓</button>
+            <button class="dark-mode-toggle" id="darkModeToggle" title="Toggle Dark Mode">🌙</button>
+            <button class="language-selector-btn" id="switchLanguageBtn" title="Language">🌐</button>
         </div>
     </div>
 
@@ -972,15 +1155,25 @@
             <span class="spinner"></span>
             <span>Thinking...</span>
         </div>
+
     </div>
 
     <!-- 3. FLOATING INPUT BAR -->
     <div class="floating-input-container">
         <div class="pill-input-bar">
+            <label for="chatImageInput" class="pill-btn" title="Attach Image">
+                <input type="file" id="chatImageInput" accept="image/*" style="display:none;">
+                📷
+            </label>
             <label for="chatFileInput" class="pill-btn" title="Upload Document">
                 <input type="file" id="chatFileInput" name="files" accept=".pdf,.txt,.doc,.docx" style="display:none;">
-                ➕
+                📎
             </label>
+            <!-- Compact image preview inside input bar -->
+            <div id="imagePreviewBar" style="display:none; position:relative;">
+                <img id="chatImagePreview" src="" alt="Preview" style="width:36px; height:36px; object-fit:cover; border-radius:6px; border:2px solid #ddd; cursor:pointer;" title="Click to view">
+                <button id="removeImageBtn" style="position:absolute; top:-6px; right:-6px; background:#ff5555; color:#fff; border:none; width:18px; height:18px; border-radius:50%; font-size:12px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; box-shadow:0 2px 4px rgba(0,0,0,0.2);" title="Remove image">×</button>
+            </div>
             <textarea id="question" placeholder="Ask your question..." maxlength="5000" rows="1"></textarea>
             <button type="button" id="voiceBtn" class="pill-btn" title="Voice Input">🎤</button>
             <button type="button" id="sendBtn" class="pill-btn send-btn" title="Send Message">➤</button>
@@ -995,34 +1188,38 @@
 
     <script>
         // Utility: Add message to chat
-        function addMessage(message, sender) {
+        function addMessage(message, sender, imageData = null) {
             const chatbox = document.getElementById('chatbox');
             const msgDiv = document.createElement('div');
             msgDiv.className = 'msg ' + (sender || 'bot');
-            
-            const avatar = document.createElement('div');
-            avatar.className = 'msg-avatar';
-            
+
             const bubble = document.createElement('div');
             bubble.className = 'msg-bubble';
-            
+
+            let content = '';
             if (sender === 'user') {
-                avatar.textContent = '👤';
-                bubble.innerHTML = escapeHtml(message);
+                content = escapeHtml(message);
+                if (imageData) {
+                    content = `<img src="${imageData}" class="msg-image" style="max-width:300px; display:block;" alt="Attached image"><div style="margin-top:8px;">${content}</div>`;
+                }
+                bubble.innerHTML = `${content} <span class="msg-time">${formatTime()}</span>`;
             } else if (sender === 'bot') {
-                avatar.textContent = '🤖';
-                bubble.innerHTML = marked.parse(message);
+                bubble.innerHTML = `${marked.parse(message)} <span class="msg-time">${formatTime()}</span>`;
             } else if (sender === 'error') {
-                avatar.textContent = '⚠️';
-                bubble.innerHTML = escapeHtml(message);
+                bubble.innerHTML = `${escapeHtml(message)} <span class="msg-time">${formatTime()}</span>`;
             }
-            
-            msgDiv.appendChild(avatar);
+
             msgDiv.appendChild(bubble);
             chatbox.appendChild(msgDiv);
-            
+
             // Smooth scroll to bottom
             chatbox.parentElement.scrollTop = chatbox.parentElement.scrollHeight;
+        }
+
+        function formatTime(d=new Date()) {
+            try {
+                return d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+            } catch { return ''; }
         }
 
         // Utility: Escape HTML
@@ -1056,6 +1253,7 @@
         let currentUtterance = null;
         let lastBotMessage = '';
         let currentLanguage = localStorage.getItem('appLanguage') || 'english'; // Default to English
+        let attachedImageFile = null; // Store attached image
 
         const languageCodes = {
             'english': 'en-US',
@@ -1172,6 +1370,9 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             initSpeechRecognition();
+            updateVoiceAvailability();
+            window.addEventListener('online', updateVoiceAvailability);
+            window.addEventListener('offline', updateVoiceAvailability);
 
             // Load dark mode preference
             const darkModePreference = localStorage.getItem('darkMode');
@@ -1186,6 +1387,9 @@
             } else {
                 applyLanguage(currentLanguage);
             }
+
+            // Show walkthrough on every page load
+            showWalkthrough();
 
             // Auto-expand textarea
             const textarea = document.getElementById('question');
@@ -1206,23 +1410,44 @@
         // Send Button
         document.getElementById('sendBtn').addEventListener('click', handleSendMessage);
 
-        // Dark Mode Toggle Button
+    // Dark Mode Toggle Button
         document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
 
-        // Hamburger Menu
-        document.getElementById('hamburgerBtn').addEventListener('click', () => {
-            alert('Menu functionality - Add sidebar or navigation here');
+    // Help / Tips Button
+    document.getElementById('helpBtn').addEventListener('click', () => showWalkthrough(true));
+
+        // Image and document uploads handled via buttons in input bar
+
+        // Chat Image Input - attach image for analysis
+        document.getElementById('chatImageInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                addMessage('Please select a valid image file (JPG, PNG)', 'error');
+                return;
+            }
+
+            attachedImageFile = file;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                document.getElementById('chatImagePreview').src = ev.target.result;
+                document.getElementById('chatImageName').textContent = file.name;
+                document.getElementById('chatImageSize').textContent = `${(file.size/1024/1024).toFixed(2)} MB`;
+                document.getElementById('imagePreviewBar').style.display = 'block';
+                // Focus on question input
+                document.getElementById('question').focus();
+                document.getElementById('question').placeholder = 'Ask about this image...';
+            };
+            reader.readAsDataURL(file);
         });
 
-        // New Chat Tab
-        document.getElementById('newChatTab').addEventListener('click', () => {
-            clearChat();
-            addMessage('Hello! How can I help you with your sugarcane farming today?', 'bot');
-        });
-
-        // Uploads Tab
-        document.getElementById('uploadsTab').addEventListener('click', () => {
-            document.getElementById('chatFileInput').click();
+        // Remove attached image
+        document.getElementById('removeImageBtn').addEventListener('click', () => {
+            attachedImageFile = null;
+            document.getElementById('chatImageInput').value = '';
+            document.getElementById('imagePreviewBar').style.display = 'none';
+            document.getElementById('question').placeholder = 'Ask your question...';
         });
 
         // Header Upload Button (now part of left sidebar)
@@ -1263,10 +1488,96 @@
                 console.error('Upload error:', error);
             } finally {
                 chatFileInputLabel.disabled = false;
-                chatFileInputLabel.innerHTML = '📄';
+                chatFileInputLabel.innerHTML = '�';
             }
         });
 
+
+        // Plant Classification - Sugarcane vs Weed Detection
+        document.getElementById('classifyPlantBtn').addEventListener('click', () => {
+            document.getElementById('classifyPlantInput').click();
+        });
+
+        document.getElementById('classifyPlantInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                addMessage('❌ Please select a valid image file (JPG, PNG)', 'bot');
+                return;
+            }
+
+            // Show the image in chat as user message
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                const imageDataURL = ev.target.result;
+                addMessage('🌿 Please identify this plant: Is it sugarcane or weed?', 'user', imageDataURL);
+
+                // Show loading indicator
+                document.getElementById('loadingIndicator').style.display = 'flex';
+
+                try {
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    formData.append('language', getLanguage());
+
+                    const response = await fetch('/classify-plant', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        addMessage(`❌ Error: ${data.error || 'Classification failed'}`, 'bot');
+                        return;
+                    }
+
+                    // Format the classification result
+                    const classification = data.classification.toUpperCase();
+                    const confidence = (data.confidence * 100).toFixed(1);
+                    
+                    let emoji = '❓';
+                    let colorClass = '';
+                    if (classification === 'SUGARCANE') {
+                        emoji = '✅🌾';
+                        colorClass = 'success';
+                    } else if (classification === 'WEED') {
+                        emoji = '⚠️🌿';
+                        colorClass = 'warning';
+                    }
+
+                    let resultMessage = `${emoji} **Classification Result**\n\n`;
+                    resultMessage += `**Type:** ${classification}\n`;
+                    resultMessage += `**Confidence:** ${confidence}%\n`;
+                    
+                    if (data.plant_type && data.plant_type !== 'Unknown') {
+                        resultMessage += `**Plant Type:** ${data.plant_type}\n`;
+                    }
+                    
+                    resultMessage += `\n**Details:** ${data.details}\n`;
+                    
+                    if (data.characteristics) {
+                        resultMessage += `\n**Characteristics:** ${data.characteristics}\n`;
+                    }
+                    
+                    if (data.recommendation) {
+                        resultMessage += `\n**💡 Recommendation:** ${data.recommendation}`;
+                    }
+
+                    addMessage(resultMessage, 'bot');
+
+                } catch (error) {
+                    console.error('Classification error:', error);
+                    addMessage(`❌ Network error: ${error.message}`, 'bot');
+                } finally {
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    // Clear the file input for next use
+                    document.getElementById('classifyPlantInput').value = '';
+                }
+            };
+            reader.readAsDataURL(file);
+        });
         function addLoadedFile(filename) {
             const loadedFilesList = document.getElementById('loadedFilesList');
             // Remove "No files loaded." if present
@@ -1278,6 +1589,16 @@
             fileItem.className = 'loaded-file-item';
             fileItem.textContent = filename;
             loadedFilesList.appendChild(fileItem);
+        }
+
+        function showWalkthrough(force=false) {
+            // If chat already has content and not forced, do nothing
+            const chatbox = document.getElementById('chatbox');
+            if (chatbox.children.length > 0 && !force) return;
+
+            addMessage('👋 Welcome! Here\'s how to use Sugarcane Advisor:', 'bot');
+            addMessage('**Quick Start:**\n- Type your question below and press Send ➤\n- Tap 📷 to attach & analyze crop images (with your question)\n- Tap 📎 to upload documents for better context\n- Use 🌐 to switch language • 🌙 for dark mode • 🎤 for voice input', 'bot');
+            addMessage('💡 **Tip:** You can ask in Hindi, Marathi, Tamil, Telugu, Kannada, or English.', 'bot');
         }
 
         // Language modal (now triggered by switchLanguageBtn)
@@ -1328,31 +1649,16 @@
             document.getElementById('languageModal').classList.remove('show'); // Use classList for consistency
         });
 
+        // Image functionality now integrated into main chat flow
+
         function applyLanguage(lang) {
             const t = translations[lang] || translations['english'];
-
-            // Update header
-            document.querySelector('.app-title').textContent = 'SUGARCANE ADVISOR';
-            document.getElementById('switchLanguageBtn').textContent = lang === 'english' ? 'EN' : 
-                                                                      lang === 'hindi' ? 'हिं' :
-                                                                      lang === 'marathi' ? 'मरा' :
-                                                                      lang === 'tamil' ? 'த' :
-                                                                      lang === 'telugu' ? 'తె' :
-                                                                      lang === 'kannada' ? 'ಕ' :
-                                                                      lang === 'punjabi' ? 'ਪੰ' : 'EN';
-
-            // Update tabs
-            document.getElementById('uploadsTab').textContent = t.uploadDocuments || 'UPLOADS';
-            document.getElementById('newChatTab').textContent = t.newChat || 'NEW CHAT';
-
             // Update input area
             document.getElementById('question').placeholder = t.askQuestion;
             document.querySelector('label[for="chatFileInput"]').title = t.uploadDocument || 'Upload';
             document.getElementById('voiceBtn').title = t.voiceInput || 'Voice';
-
             // Update loading indicator
             document.querySelector('#loadingIndicator span:last-child').textContent = t.thinking;
-
             // Update modal button
             document.getElementById('saveLanguageBtn').textContent = t.continue;
         }
@@ -1364,12 +1670,22 @@
             const sendBtn = document.getElementById('sendBtn');
             const question = questionInput.value.trim();
 
-            if (!question) {
-                console.log('Question is empty');
+            // Check if we have an image attached
+            const hasImage = attachedImageFile !== null;
+
+            if (!question && !hasImage) {
+                console.log('Question and image are empty');
                 return;
             }
 
-            addMessage(question, 'user');
+            // Save image data URL for display in chat
+            let imageDataURL = null;
+            if (hasImage) {
+                imageDataURL = document.getElementById('chatImagePreview').src;
+            }
+
+            // Add user message with image to chat
+            addMessage(question || 'Analyze this image', 'user', imageDataURL);
             questionInput.value = '';
             questionInput.style.height = 'auto';
 
@@ -1379,29 +1695,78 @@
 
             try {
                 const lang = getLanguage();
-                console.log('Sending question to /ask endpoint', { question, language: lang });
-                const res = await fetch('/ask', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        question: question,
-                        language: lang
-                    })
-                });
 
-                const data = await res.json();
-                console.log('Response from /ask endpoint', data);
+                // If image is attached, use /scan-image endpoint
+                if (hasImage) {
+                    console.log('Sending image to /scan-image endpoint');
+                    const formData = new FormData();
+                    formData.append('file', attachedImageFile);
+                    formData.append('language', lang);
+                    if (question) {
+                        formData.append('prompt', question);
+                    }
 
-                if (!res.ok) {
-                    addMessage(data.error || 'Failed to get response', 'error');
+                    const res = await fetch('/scan-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await res.json();
+                    console.log('Response from /scan-image endpoint', data);
+
+                    if (!res.ok) {
+                        addMessage(data.error || 'Failed to analyze image', 'error');
+                    } else {
+                        // Format the structured response
+                        let response = `**Image Analysis**\n\n`;
+                        if (data.summary) response += `📋 **Summary:** ${data.summary}\n\n`;
+                        if (data.severity) response += `⚠️ **Severity:** ${data.severity}\n\n`;
+                        if (data.diagnosis && data.diagnosis.length > 0) {
+                            response += `🔍 **Diagnosis:**\n${data.diagnosis.map(d => `- ${d}`).join('\n')}\n\n`;
+                        }
+                        if (data.recommendations && data.recommendations.length > 0) {
+                            response += `💊 **Recommendations:**\n${data.recommendations.map(r => `- ${r}`).join('\n')}\n\n`;
+                        }
+                        if (data.preventive_measures && data.preventive_measures.length > 0) {
+                            response += `🛡️ **Preventive Measures:**\n${data.preventive_measures.map(p => `- ${p}`).join('\n')}`;
+                        }
+
+                        addMessage(response, 'bot');
+                        lastBotMessage = response;
+                    }
+
+                    // Clear attached image
+                    attachedImageFile = null;
+                    document.getElementById('chatImageInput').value = '';
+                    document.getElementById('imagePreviewBar').style.display = 'none';
+                    document.getElementById('question').placeholder = 'Ask your question...';
+
                 } else {
-                    addMessage(data.response, 'bot');
-                    lastBotMessage = data.response;
+                    // Regular text question
+                    console.log('Sending question to /ask endpoint', { question, language: lang });
+                    const res = await fetch('/ask', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            question: question,
+                            language: lang
+                        })
+                    });
+
+                    const data = await res.json();
+                    console.log('Response from /ask endpoint', data);
+
+                    if (!res.ok) {
+                        addMessage(data.error || 'Failed to get response', 'error');
+                    } else {
+                        addMessage(data.response, 'bot');
+                        lastBotMessage = data.response;
+                    }
                 }
             } catch (error) {
-                console.error('Error in /ask fetch:', error);
+                console.error('Error in fetch:', error);
                 addMessage('Network error: ' + error.message, 'error');
             } finally {
                 hideLoading();
@@ -1410,30 +1775,130 @@
         }
 
         // Voice Recognition Setup
+        let isListening = false;
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
                 recognition.continuous = false;
                 recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                recognition.onstart = () => {
+                    isListening = true;
+                    const voiceBtn = document.getElementById('voiceBtn');
+                    voiceBtn.textContent = '🔴';
+                    voiceBtn.title = 'Listening... (tap to stop)';
+                    console.log('Voice recognition started');
+                };
+
+                recognition.onend = () => {
+                    isListening = false;
+                    const voiceBtn = document.getElementById('voiceBtn');
+                    voiceBtn.textContent = '🎤';
+                    voiceBtn.title = 'Voice Input';
+                    console.log('Voice recognition ended');
+                };
 
                 recognition.onresult = (event) => {
                     const transcript = event.results[0][0].transcript;
+                    console.log('Voice transcript:', transcript);
                     document.getElementById('question').value = transcript;
+                    // Auto-focus and expand textarea
+                    const textarea = document.getElementById('question');
+                    textarea.focus();
+                    textarea.style.height = 'auto';
+                    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
                 };
 
                 recognition.onerror = (event) => {
-                    console.error('Voice recognition error:', event.error);
-                    addMessage('Voice error: ' + event.error, 'error');
+                    console.error('Voice recognition error:', event.error, event);
+                    isListening = false;
+                    const voiceBtn = document.getElementById('voiceBtn');
+                    voiceBtn.textContent = '🎤';
+                    voiceBtn.title = 'Voice Input';
+                    
+                    const friendly = getFriendlyVoiceError(event.error);
+                    addMessage(friendly, 'error');
                 };
 
                 // Voice Button
                 document.getElementById('voiceBtn').addEventListener('click', () => {
+                    // Stop if already listening
+                    if (isListening) {
+                        try {
+                            recognition.stop();
+                        } catch (e) {
+                            console.warn('Stop failed', e);
+                        }
+                        return;
+                    }
+
+                    // Check online status
+                    if (!navigator.onLine) {
+                        addMessage('Voice needs internet connection. You appear to be offline.', 'error');
+                        return;
+                    }
+
+                    // Check if browser supports speech recognition
+                    if (!recognition) {
+                        addMessage('Voice input not supported in this browser. Try Chrome or Edge.', 'error');
+                        return;
+                    }
+
+                    // Set language and start
                     const lang = languageCodes[getLanguage()] || 'en-US';
                     recognition.lang = lang;
-                    recognition.start();
+                    console.log('Starting voice recognition with language:', lang);
+                    
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.error('Recognition start failed', e);
+                        if (e.name === 'InvalidStateError') {
+                            // Already running, try to stop and restart
+                            recognition.stop();
+                            setTimeout(() => {
+                                try { recognition.start(); } catch (e2) { 
+                                    addMessage('Voice recognition failed to start. Please try again.', 'error');
+                                }
+                            }, 100);
+                        } else {
+                            addMessage('Could not start voice recognition: ' + e.message, 'error');
+                        }
+                    }
                 });
+            } else {
+                console.warn('Speech recognition not supported in this browser');
+                // Disable voice button
+                const voiceBtn = document.getElementById('voiceBtn');
+                if (voiceBtn) {
+                    voiceBtn.disabled = true;
+                    voiceBtn.title = 'Voice input not supported in this browser';
+                }
             }
+        }
+
+        function getFriendlyVoiceError(code) {
+            const map = {
+                'network': '🌐 Voice service needs internet. Check your connection and try again. (Tip: Voice recognition requires an active internet connection)',
+                'no-speech': '🤫 No speech detected. Speak clearly into your microphone and try again.',
+                'audio-capture': '🎤 No microphone found. Please connect a microphone or enable microphone access.',
+                'not-allowed': '🚫 Microphone blocked. Allow microphone access in your browser settings (usually a 🎤 icon in the address bar).',
+                'service-not-allowed': '⛔ Voice service blocked by browser. Check site permissions in your browser settings.',
+                'aborted': '⏹️ Voice input cancelled. Tap the mic button to try again.',
+                'language-not-supported': '🌍 Voice recognition doesn\'t support this language. Try switching to English, Hindi, or another supported language.'
+            };
+            return map[code] || ('⚠️ Voice recognition error: ' + code + '. Please try again.');
+        }
+
+        function updateVoiceAvailability() {
+            const btn = document.getElementById('voiceBtn');
+            const supported = ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+            const online = navigator.onLine;
+            btn.disabled = !(supported && online);
+            btn.setAttribute('aria-disabled', String(btn.disabled));
+            btn.title = btn.disabled ? (supported ? 'Voice needs internet connection' : 'Voice input not supported on this browser') : 'Voice Input';
         }
 
         // Text-to-Speech

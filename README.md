@@ -21,6 +21,10 @@ A specialized AI-powered chatbot designed for Indian farmers, particularly those
 - Treatment recommendations from knowledge base
 - Visual analysis with actionable advice
 
+#### 🔍 Guided Image Questioning (New)
+While scanning an image you can now enter an optional prompt (e.g. "Is this early red rot?" or "Do I need to apply fungicide?").
+The model will tailor the structured analysis to directly answer your specific question in addition to the general summary, issues, severity, recommendations and preventive advice.
+
 ### 📄 Document-Based Knowledge
 - Upload agricultural documents (PDF, TXT, DOC, DOCX)
 - AI searches through documents to answer questions

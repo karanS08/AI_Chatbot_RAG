@@ -1,9 +1,12 @@
 """Agricultural advisory Flask app: chat (RAG), image scan, plant classification.
-Clean consolidated implementation replacing prior corrupted refactor state."""
+Main Flask application with routes and error handlers.
+AI functions are delegated to ai_services module for clean separation of concerns.
+"""
 from __future__ import annotations
 
-import os, time, json, re, glob, io, logging
-from typing import List, Dict, Any
+import os, json, re, logging
+from typing import Optional
+from io import BytesIO
 
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -14,17 +17,28 @@ from PIL import Image
 from google import genai
 from google.genai import types
 
+# Import AI services module
+import ai_services
+
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
+# Configure logging to write to both console and file
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('/tmp/app_debug.log'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
 
-# ----------------------------------------------------------------------------
+# ============================================================================
 # Configuration / Constants
-# ----------------------------------------------------------------------------
+# ============================================================================
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 ALLOWED_EXTENSIONS = {'pdf', 'txt', 'doc', 'docx', 'jpg', 'jpeg', 'png'}
@@ -33,160 +47,48 @@ IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png'}
 AGRICULTURAL_INSTRUCTIONS = {
     'english': (
         'You are an expert agricultural advisor for sugarcane farmers in India. '
-        'Answer briefly with practical steps and clear structure. '
-        'IMPORTANT: Always respond in English only, regardless of the language used in the question.'
-    ),
-    'hindi': (
-        'आप भारत में गन्ना किसानों के लिए एक विशेषज्ञ कृषि सलाहकार हैं। '
-        'व्यावहारिक चरणों और स्पष्ट संरचना के साथ संक्षेप में उत्तर दें। '
-        'अति महत्वपूर्ण: प्रश्न किसी भी भाषा में हो, आपको हमेशा केवल हिंदी देवनागरी लिपि में ही जवाब देना है। '
-        'अंग्रेजी शब्दों या रोमन लिपि का उपयोग बिल्कुल न करें। केवल देवनागरी हिंदी में लिखें। '
-        'उदाहरण: "namaskar" नहीं, "नमस्कार" लिखें। "kisan" नहीं, "किसान" लिखें।'
-    ),
-    'marathi': (
-        'तुम्ही भारतातील ऊस शेतकऱ्यांसाठी तज्ञ कृषी सल्लागार आहात. '
-        'व्यावहारिक चरणे आणि स्पष्ट रचनेसह थोडक्यात उत्तर द्या. '
-        'अति महत्त्वाचे: प्रश्न कोणत्याही भाषेत असला तरी, तुम्ही नेहमी फक्त मराठी देवनागरी लिपीत उत्तर द्यावे. '
-        'इंग्रजी शब्द किंवा रोमन लिपि वापरू नका. फक्त देवनागरी मराठीत लिहा.'
-    ),
-    'tamil': (
-        'நீங்கள் இந்தியாவில் கரும்பு விவசாயிகளுக்கான நிபுணர் விவசாய ஆலோசகர். '
-        'நடைமுறை படிகள் மற்றும் தெளிவான அமைப்புடன் சுருக்கமாக பதிலளிக்கவும். '
-        'மிக முக்கியம்: கேள்வி எந்த மொழியில் இருந்தாலும், நீங்கள் எப்போதும் தமிழ் எழுத்துக்களில் மட்டுமே பதிலளிக்க வேண்டும். '
-        'ஆங்கில வார்த்தைகள் அல்லது ரோமன் எழுத்துக்களைப் பயன்படுத்த வேண்டாம். தமிழ் எழுத்துக்களில் மட்டுமே எழுதவும்.'
-    ),
-    'telugu': (
-        'మీరు భారతదేశంలో చెరకు రైతులకు నిపుణుడైన వ్యవసాయ సలహాదారు. '
-        'ఆచరణాత్మక దశలు మరియు స్పష్టమైన నిర్మాణంతో క్లుప్తంగా సమాధానం ఇవ్వండి. '
-        'అతి ముఖ్యం: ప్రశ్న ఏ భాషలో ఉన్నా, మీరు ఎల్లప్పుడూ తెలుగు లిపిలో మాత్రమే సమాధానం ఇవ్వాలి. '
-        'ఆంగ్ల పదాలు లేదా రోమన్ లిపిని ఉపయోగించవద్దు. తెలుగు లిపిలో మాత్రమే వ్రాయండి.'
-    ),
-    'kannada': (
-        'ನೀವು ಭಾರತದಲ್ಲಿ ಕಬ್ಬು ರೈತರಿಗೆ ತಜ್ಞ ಕೃಷಿ ಸಲಹೆಗಾರರು. '
-        'ಪ್ರಾಯೋಗಿಕ ಹಂತಗಳು ಮತ್ತು ಸ್ಪಷ್ಟ ರಚನೆಯೊಂದಿಗೆ ಸಂಕ್ಷಿಪ್ತವಾಗಿ ಉತ್ತರಿಸಿ. '
-        'ಅತ್ಯಂತ ಮುಖ್ಯ: ಪ್ರಶ್ನೆ ಯಾವ ಭಾಷೆಯಲ್ಲಿದ್ದರೂ, ನೀವು ಯಾವಾಗಲೂ ಕನ್ನಡ ಲಿಪಿಯಲ್ಲಿ ಮಾತ್ರ ಉತ್ತರಿಸಬೇಕು. '
-        'ಇಂಗ್ಲಿಷ್ ಪದಗಳು ಅಥವಾ ರೋಮನ್ ಲಿಪಿ ಬಳಸಬೇಡಿ. ಕನ್ನಡ ಲಿಪಿಯಲ್ಲಿ ಮಾತ್ರ ಬರೆಯಿರಿ.'
-    ),
-    'gujarati': (
-        'તમે ભારતમાં શેરડી ખેડૂતો માટે નિષ્ણાત કૃષિ સલાહકાર છો. '
-        'વ્યવહારુ પગલાં અને સ્પષ્ટ માળખા સાથે સંક્ષિપ્તમાં જવાબ આપો. '
-        'અત્યંત મહત્વપૂર્ણ: પ્રશ્ન કોઈપણ ભાષામાં હોય, તમારે હંમેશા ફક્ત ગુજરાતી લિપિમાં જ જવાબ આપવો જોઈએ. '
-        'અંગ્રેજી શબ્દો અથવા રોમન લિપિનો ઉપયોગ ન કરો. ફક્ત ગુજરાતી લિપિમાં જ લખો.'
-    ),
-    'punjabi': (
-        'ਤੁਸੀਂ ਭਾਰਤ ਵਿੱਚ ਗੰਨੇ ਦੇ ਕਿਸਾਨਾਂ ਲਈ ਇੱਕ ਮਾਹਰ ਖੇਤੀਬਾੜੀ ਸਲਾਹਕਾਰ ਹੋ। '
-        'ਵਿਹਾਰਕ ਕਦਮਾਂ ਅਤੇ ਸਪੱਸ਼ਟ ਢਾਂਚੇ ਨਾਲ ਸੰਖੇਪ ਵਿੱਚ ਜਵਾਬ ਦਿਓ। '
-        'ਬਹੁਤ ਮਹੱਤਵਪੂਰਨ: ਸਵਾਲ ਕਿਸੇ ਵੀ ਭਾਸ਼ਾ ਵਿੱਚ ਹੋਵੇ, ਤੁਹਾਨੂੰ ਹਮੇਸ਼ਾ ਗੁਰਮੁਖੀ ਲਿਪੀ ਵਿੱਚ ਹੀ ਜਵਾਬ ਦੇਣਾ ਹੈ। '
-        'ਅੰਗਰੇਜ਼ੀ ਸ਼ਬਦ ਜਾਂ ਰੋਮਨ ਲਿਪੀ ਨਾ ਵਰਤੋ। ਗੁਰਮੁਖੀ ਵਿੱਚ ਹੀ ਲਿਖੋ।'
-    ),
-    'bengali': (
-        'আপনি ভারতে আখ চাষীদের জন্য একজন বিশেষজ্ঞ কৃষি পরামর্শদাতা। '
-        'ব্যবহারিক পদক্ষেপ এবং স্পষ্ট কাঠামোর সাথে সংক্ষিপ্তভাবে উত্তর দিন। '
-        'অত্যন্ত গুরুত্বপূর্ণ: প্রশ্ন যেকোনো ভাষায় হোক, আপনাকে সবসময় শুধুমাত্র বাংলা লিপিতে উত্তর দিতে হবে। '
-        'ইংরেজি শব্দ বা রোমান লিপি ব্যবহার করবেন না। শুধুমাত্র বাংলা লিপিতে লিখুন।'
-    ),
-    'malayalam': (
-        'നിങ്ങൾ ഇന്ത്യയിലെ കരിമ്പ് കർഷകർക്കുള്ള വിദഗ്ദ്ധ കാർഷിക ഉപദേശകനാണ്. '
-        'പ്രായോഗിക ഘട്ടങ്ങളും വ്യക്തമായ ഘടനയും ഉപയോഗിച്ച് ചുരുക്കമായി ഉത്തരം നൽകുക. '
-        'അതീവ പ്രധാനം: ചോദ്യം ഏത് ഭാഷയിലായാലും, നിങ്ങൾ എപ്പോഴും മലയാളം ലിപിയിൽ മാത്രം ഉത്തരം നൽകണം. '
-        'ഇംഗ്ലീഷ് വാക്കുകളോ റോമൻ ലിപിയോ ഉപയോഗിക്കരുത്. മലയാളം ലിപിയിൽ മാത്രം എഴുതുക.'
-    ),
-    'odia': (
-        'ଆପଣ ଭାରତରେ ଆଖୁ ଚାଷୀମାନଙ୍କ ପାଇଁ ଜଣେ ବିଶେଷଜ୍ଞ କୃଷି ପରାମର୍ଶଦାତା | '
-        'ବ୍ୟବହାରିକ ପଦକ୍ଷେପ ଏବଂ ସ୍ପଷ୍ଟ ସଂରଚନା ସହିତ ସଂକ୍ଷେପରେ ଉତ୍ତର ଦିଅନ୍ତୁ | '
-        'ଅତ୍ୟଧିକ ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ: ପ୍ରଶ୍ନ ଯେକୌଣସି ଭାଷାରେ ହେଲେ ମଧ୍ୟ, ଆପଣ ସବୁବେଳେ କେବଳ ଓଡ଼ିଆ ଲିପିରେ ଉତ୍ତର ଦେବା ଉଚିତ୍ | '
-        'ଇଂରାଜୀ ଶବ୍ଦ ବା ରୋମାନ୍ ଲିପି ବ୍ୟବହାର କରନ୍ତୁ ନାହିଁ | କେବଳ ଓଡ଼ିଆ ଲିପିରେ ଲେଖନ୍ତୁ |'
-    ),
-    'assamese': (
-        'আপুনি ভাৰতত কুঁহিয়াৰ খেতিয়কসকলৰ বাবে এজন বিশেষজ্ঞ কৃষি পৰামৰ্শদাতা। '
-        'ব্যৱহাৰিক পদক্ষেপ আৰু স্পষ্ট গঠনৰ সৈতে সংক্ষিপ্তভাৱে উত্তৰ দিয়ক। '
-        'অতি গুৰুত্বপূৰ্ণ: প্ৰশ্ন যিকোনো ভাষাত হওক, আপুনি সদায় কেৱল অসমীয়া লিপিতহে উত্তৰ দিব লাগিব। '
-        'ইংৰাজী শব্দ বা ৰোমান লিপি ব্যৱহাৰ নকৰিব। কেৱল অসমীয়া লিপিত লিখক।'
-    ),
-    'urdu': (
-        'آپ ہندوستان میں گنے کے کسانوں کے لیے ماہر زرعی مشیر ہیں۔ '
-        'عملی اقدامات اور واضح ڈھانچے کے ساتھ مختصر جواب دیں۔ '
-        'انتہائی اہم: سوال کسی بھی زبان میں ہو، آپ کو ہمیشہ صرف اردو رسم الخط میں جواب دینا ہے۔ '
-        'انگریزی الفاظ یا رومن رسم الخط استعمال نہ کریں۔ صرف اردو رسم الخط میں لکھیں۔'
-    ),
-    'hinglish': (
-        'You are an expert agricultural advisor for sugarcane farmers in India. '
-        'Answer briefly with practical steps and clear structure. '
-        'CRITICAL: Always respond in Hinglish (Hindi written in Roman/English script). '
-        'Use Hindi words but write them in English letters. '
-        'Examples: Write "Namaskar" not "नमस्कार", "Kisan" not "किसान", "Kaise ho" not "कैसे हो", '
-        '"Sugarcane ke liye pani bahut zaroori hai" not "गन्ने के लिए पानी बहुत जरूरी है". '
-        'NEVER use Devanagari script. Always use Roman script for Hindi words. '
-        'This is Hinglish - Hindi language written in English alphabet.'
+        'Your primary role is to provide clear, practical text answers. '
+        'Crucially, you also have a special capability: when a user asks you to "generate an image" or "create an infographic", '
+        'your specific task is to provide the detailed text that will be used to create that image. '
+        'You MUST NOT state that you cannot create images. Instead, you MUST respond by saying "Certainly! Here is the detailed information for the infographic on [topic]:" '
+        'and then provide the complete text content for the visual.'
     )
 }
 
 api_key = os.getenv('GOOGLE_API_KEY')
 client = None
-FILE_SEARCH_STORE = None
+
+# Initialize Gemini client
 if api_key:
     try:
         client = genai.Client(api_key=api_key)
-        FILE_SEARCH_STORE = client.file_search_stores.create()
-        logger.info(f'Initialized Gemini file store: {FILE_SEARCH_STORE.name}')
+        logger.info('✅ Initialized Gemini client')
+        # Initialize ai_services with client and app
+        ai_services.set_client_and_app(client, app, app.config['UPLOAD_FOLDER'])
     except Exception as e:  # pragma: no cover
-        logger.error(f'Failed to initialize Gemini client: {e}')
+        logger.error(f'❌ Failed to initialize Gemini client: {e}')
 else:
-    logger.warning('GOOGLE_API_KEY missing; AI features degraded.')
+    logger.warning('⚠️ GOOGLE_API_KEY missing; AI features degraded.')
 
-# ----------------------------------------------------------------------------
-# Helpers
-# ----------------------------------------------------------------------------
+# Global flag to track if knowledge base has been initialized
+_KB_INITIALIZED = False
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
 def allowed_file(filename: str) -> bool:
+    """Check if file extension is allowed for upload."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def ensure_file_search_store():
-    global FILE_SEARCH_STORE
-    if client is None:
-        raise RuntimeError('GOOGLE_API_KEY not configured')
-    if FILE_SEARCH_STORE is None:
-        FILE_SEARCH_STORE = client.file_search_stores.create()
-    return FILE_SEARCH_STORE
-
-def upload_file_to_store(path: str) -> bool:
-    try:
-        store = ensure_file_search_store()
-        op = client.file_search_stores.upload_to_file_search_store(
-            file_search_store_name=store.name,
-            file=path
-        )
-        while not getattr(op, 'done', True):
-            time.sleep(1)
-            op = client.operations.get(op.name)
-        return True
-    except Exception as e:  # pragma: no cover
-        logger.warning(f'Upload to store failed for {path}: {e}')
-        return False
-
-def load_reference_images(category: str, max_images: int = 2) -> List[Dict[str, Any]]:
-    folder = os.path.join('knowledge_base', 'plant_images', category)
-    if not os.path.isdir(folder):
-        return []
-    paths: List[str] = []
-    for ext in ('*.jpg', '*.jpeg', '*.png'):
-        paths.extend(glob.glob(os.path.join(folder, ext)))
-    paths = paths[:max_images]
-    images = []
-    for p in paths:
-        try:
-            with open(p, 'rb') as f:
-                images.append({'data': f.read(), 'filename': os.path.basename(p)})
-        except Exception as e:  # pragma: no cover
-            logger.warning(f'Failed to read reference image {p}: {e}')
-    return images
-
-# ----------------------------------------------------------------------------
+# ============================================================================
 # Routes
-# ----------------------------------------------------------------------------
+# ============================================================================
+
 @app.route('/')
 def index():
+    """Serve main app."""
     return send_from_directory('templates', 'index.html')
-
 
 @app.route('/_template_info')
 def _template_info():
@@ -200,14 +102,30 @@ def _template_info():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.before_request
+def initialize_on_first_request():
+    """Initialize the knowledge base on the first request."""
+    global _KB_INITIALIZED
+    if not _KB_INITIALIZED and client is not None:
+        _KB_INITIALIZED = True
+        logger.info("🚀 First request detected - initializing knowledge base...")
+        ai_services.initialize_knowledge_base()
+
 @app.route('/health')
 def health():
+    """Health check endpoint."""
     if not api_key:
         return jsonify({'status': 'unhealthy', 'error': 'GOOGLE_API_KEY missing'}), 500
-    return jsonify({'status': 'healthy', 'file_search_store_initialized': bool(FILE_SEARCH_STORE)}), 200
+    return jsonify({'status': 'healthy'}), 200
+
+@app.route('/uploads/<path:filename>')
+def serve_upload(filename):
+    """Serve uploaded files including generated infographics."""
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/upload', methods=['POST'])
 def upload():
+    """Upload files to knowledge base."""
     if 'files' not in request.files:
         return jsonify({'error': 'No files provided'}), 400
     files = request.files.getlist('files')
@@ -223,7 +141,7 @@ def upload():
         path = os.path.join(app.config['UPLOAD_FOLDER'], fname)
         try:
             f.save(path)
-            upload_file_to_store(path)
+            ai_services.upload_file_to_store(path)
             uploaded.append(fname)
         except Exception as e:  # pragma: no cover
             errors.append(f'{fname}: {e}')
@@ -233,31 +151,124 @@ def upload():
 
 @app.route('/ask', methods=['POST'])
 def ask():
+    """
+    Intelligent RAG endpoint using Gemini 3 Pro.
+    The model decides whether to respond with text or generate an image.
+    Includes dual-LLM fallback: if text response suggests image generation, 
+    we automatically call Gemini 3 Pro Image (second LLM) to create the infographic.
+    """
+    print("\n!!! /ASK ROUTE CALLED !!!\n", flush=True)
     if not request.json:
         return jsonify({'error': 'JSON body required'}), 400
     question = (request.json.get('question', '') or '').strip()
     lang = request.json.get('language', 'english').lower()
     if not question:
         return jsonify({'error': 'Question cannot be empty'}), 400
+
+    print(f"!!! QUESTION: {question} !!!\n", flush=True)
+
+    logger.info(f"\n{'='*80}")
+    logger.info(f"📝 NEW QUESTION RECEIVED: '{question}'")
+    logger.info(f"🌍 Language: {lang}")
+    logger.info(f"{'='*80}")
+
     instruction = AGRICULTURAL_INSTRUCTIONS.get(lang, AGRICULTURAL_INSTRUCTIONS['english'])
     try:
-        store = ensure_file_search_store()
+        store = ai_services.ensure_file_search_store()
+        
+        # ========== FIRST LLM CALL: Gemini 3 Pro with RAG ==========
+        logger.info("🤖 [LLM 1] Making FIRST call to Gemini 3 Pro (with RAG)...")
+        logger.info("   ✓ Using gemini-3-pro-preview (reasoning model)")
+        logger.info("   ✓ Thinking level: HIGH (for complex agricultural decisions)")
+        logger.info("   ✓ Tools: File Search (RAG knowledge base)")
+        
+        model_name = 'gemini-3-pro-preview'
+        print(f"\n\n!!! USING MODEL: {model_name} !!!\n\n", flush=True)
+        logger.info(f"!!! PYTHON IS ACTUALLY USING MODEL: {model_name} !!!")
+        
         resp = client.models.generate_content(
-            model='gemini-2.5-flash-lite',
+            model=model_name,
             contents=f'{instruction}\n\nUser Question: {question}',
             config=types.GenerateContentConfig(
+                # Tools: File Search (RAG knowledge base)
                 tools=[types.Tool(file_search=types.FileSearch(file_search_store_names=[store.name]))]
             )
         )
+        
         if not resp.candidates:
+            logger.error("❌ No response generated from first LLM call")
             return jsonify({'error': 'No response generated'}), 500
-        return jsonify({'response': resp.text or 'No answer'}), 200
+        
+        raw_text = resp.text or 'No answer'
+        logger.info(f"✅ [LLM 1] Received response (length: {len(raw_text)} chars)")
+        
+        # ========== INTELLIGENT DECISION LOGIC ==========
+        # Check for image generation indicators
+        image_request_keywords = [
+            'generate image', 'create image', 'make an image', 'draw',
+            'create infographic', 'generate infographic', 'make infographic',
+            'show me', 'visual', 'diagram', 'chart'
+        ]
+        
+        image_refusal_phrases = [
+            'cannot generate', 'cannot create', 'cannot make', 'unable to generate',
+            'unable to create', 'cannot draw', 'i cannot', 'i am unable',
+            'do not have', 'do not support', 'not capable'
+        ]
+        
+        is_image_request = any(kw in question.lower() for kw in image_request_keywords)
+        is_ai_refusing_images = any(phrase in raw_text.lower() for phrase in image_refusal_phrases)
+        
+        logger.info(f"📊 Decision Analysis:")
+        logger.info(f"   • User requested image: {is_image_request}")
+        logger.info(f"   • AI refusing to generate: {is_ai_refusing_images}")
+        
+        # ========== DUAL-LLM FALLBACK: If text mentions can't generate images ==========
+        if is_image_request and is_ai_refusing_images:
+            logger.info("\n⚠️  [DUAL-LLM TRIGGER] User asked for image but LLM 1 refused.")
+            logger.info("   → Activating LLM 2 (Gemini 3 Pro Image) for direct image generation...")
+            
+            try:
+                # Second LLM call: Use Gemini 3 Pro Image to generate infographic
+                image_path = ai_services.generate_infographic_image(content=raw_text, topic=question)
+                
+                if image_path:
+                    logger.info(f"✅ [LLM 2] Image generated successfully: {image_path}")
+                    result = {
+                        'response': f"Certainly! Here is the infographic you requested for '{question}'.",
+                        'infographic_url': f'/uploads/{image_path}',
+                        'infographic_reason': 'Generated by Gemini 3 Pro Image (LLM 2 - Fallback)',
+                        'dual_llm_triggered': True
+                    }
+                    logger.info(f"✅ Returning response with infographic")
+                    return jsonify(result), 200
+                else:
+                    logger.error("❌ [LLM 2] Image generation failed (returned None)")
+                    # Fall back to text response
+                    logger.info("   → Falling back to text response from LLM 1")
+                    result = {'response': raw_text}
+                    return jsonify(result), 200
+            except Exception as e:
+                logger.error(f"❌ [LLM 2] Exception during image generation: {type(e).__name__}: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                # Fall back to text response
+                logger.info("   → Falling back to text response from LLM 1")
+                result = {'response': raw_text}
+                return jsonify(result), 200
+        
+        # ========== DEFAULT RESPONSE: Return AI text response ==========
+        logger.info("✅ Returning text response from LLM 1")
+        result = {'response': raw_text}
+        return jsonify(result), 200
+        
     except Exception as e:  # pragma: no cover
         logger.error(f'/ask error: {e}')
         return jsonify({'error': 'Failed to process question'}), 500
 
 @app.route('/scan-image', methods=['POST'])
 def scan_image():
+    """Analyze agricultural crop images."""
     if 'file' not in request.files:
         return jsonify({'error': 'No image file provided'}), 400
     image_file = request.files['file']
@@ -288,9 +299,9 @@ def scan_image():
         "}\nRules: no markdown, target language, use 'None detected' if healthy."
     )
     try:
-        store = ensure_file_search_store()
+        store = ai_services.ensure_file_search_store()
         resp = client.models.generate_content(
-            model='gemini-2.5-flash-lite',
+            model='gemini-3-pro-preview',
             contents=[types.Content(parts=[
                 types.Part(text=prompt),
                 types.Part(inline_data=types.Blob(mime_type=image_file.content_type or 'image/jpeg', data=img_bytes))
@@ -335,7 +346,7 @@ def scan_image():
         retry_prompt = prompt + '\nRe-check subtle early-stage issues; add at least one recommendation if appropriate. Do NOT invent diseases.'
         try:
             retry = client.models.generate_content(
-                model='gemini-2.5-flash-lite',
+                model='gemini-3-pro-preview',
                 contents=[types.Content(parts=[
                     types.Part(text=retry_prompt),
                     types.Part(inline_data=types.Blob(mime_type=image_file.content_type or 'image/jpeg', data=img_bytes))
@@ -345,10 +356,22 @@ def scan_image():
                 raw_text = retry.text
         except Exception as re_err:  # pragma: no cover
             logger.warning(f'Retry failed: {re_err}')
-    return jsonify({**data, 'prompt_used': user_prompt, 'raw_text': raw_text}), 200
+    out = {**data, 'prompt_used': user_prompt, 'raw_text': raw_text}
+    try:
+        # Pass user_prompt as original_question to check for showcase triggers
+        decision = ai_services.decide_make_infographic(json.dumps(out, ensure_ascii=False), original_question=user_prompt)
+        if decision.get('make'):
+            image_path = ai_services.generate_infographic_image(json.dumps(out, ensure_ascii=False), decision.get('style', 'simple'))
+            if image_path:
+                out['infographic_url'] = f'/uploads/{image_path}'
+                out['infographic_reason'] = decision.get('reason')
+    except Exception as e:
+        logger.warning(f'Infographic generation failed in scan-image: {e}')
+    return jsonify(out), 200
 
 @app.route('/classify-plant', methods=['POST'])
 def classify_plant():
+    """Classify plants from images (sugarcane, weed, or unknown)."""
     if client is None:
         return jsonify({'error': 'AI unavailable'}), 503
     if 'image' not in request.files:
@@ -358,12 +381,12 @@ def classify_plant():
         return jsonify({'error': 'No selected file'}), 400
     image_bytes = image_file.read()
     try:
-        img = Image.open(io.BytesIO(image_bytes))
+        img = Image.open(BytesIO(image_bytes))
         img.verify()
     except Exception:
         return jsonify({'error': 'Invalid image file'}), 400
-    refs_sugarcane = load_reference_images('sugarcane')
-    refs_weeds = load_reference_images('weeds')
+    refs_sugarcane = ai_services.load_reference_images('sugarcane')
+    refs_weeds = ai_services.load_reference_images('weeds')
     prompt = (
         'Classify the query image strictly as ONE of: sugarcane, weed, unknown.\n'
         'Return JSON ONLY: {\n'
@@ -384,7 +407,13 @@ def classify_plant():
         parts.append(types.Part(text=f'[Reference Weed {r["filename"]}]'))
     parts.append(types.Part(text='[QUERY IMAGE]'))
     parts.append(types.Part(inline_data=types.Blob(mime_type=image_file.content_type or 'image/jpeg', data=image_bytes)))
-    resp = client.models.generate_content(model='gemini-2.0-flash-exp', contents=[types.Content(parts=parts)])
+    resp = client.models.generate_content(
+        model='gemini-3-pro-preview',
+        contents=[types.Content(parts=parts)],
+        config=types.GenerateContentConfig(
+            # Use default settings; reasoning-level option removed for compatibility
+        )
+    )
     raw = (resp.text or '').strip()
     jm = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw, re.DOTALL)
     jtxt = jm.group(1) if jm else raw
@@ -399,10 +428,21 @@ def classify_plant():
             'characteristics': 'Parsing failed',
             'recommendation': 'Retry with clearer image'
         }
-    return jsonify({'success': True, **data, 'raw_response': raw}), 200
+    out = {'success': True, **data, 'raw_response': raw}
+    try:
+        decision = ai_services.decide_make_infographic(json.dumps(out, ensure_ascii=False))
+        if decision.get('make'):
+            image_path = ai_services.generate_infographic_image(json.dumps(out, ensure_ascii=False), decision.get('style', 'simple'))
+            if image_path:
+                out['infographic_url'] = f'/uploads/{image_path}'
+                out['infographic_reason'] = decision.get('reason')
+    except Exception as e:
+        logger.warning(f'Infographic generation failed in classify-plant: {e}')
+    return jsonify(out), 200
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
+    """Alternative chat endpoint for webhooks."""
     data = request.get_json(force=True, silent=True) or {}
     chat_text = data.get('chat') or data.get('message') or ''
     if not chat_text:
@@ -410,9 +450,9 @@ def webhook():
     lang = data.get('language', 'english').lower()
     instruction = AGRICULTURAL_INSTRUCTIONS.get(lang, AGRICULTURAL_INSTRUCTIONS['english'])
     try:
-        store = ensure_file_search_store()
+        store = ai_services.ensure_file_search_store()
         resp = client.models.generate_content(
-            model='gemini-2.5-flash-lite',
+            model='gemini-3-pro-preview',
             contents=f'{instruction}\n\nUser Chat: {chat_text}',
             config=types.GenerateContentConfig(
                 tools=[types.Tool(file_search=types.FileSearch(file_search_store_names=[store.name]))]
@@ -425,9 +465,10 @@ def webhook():
         logger.error(f'Webhook error: {e}')
         return jsonify({'error': 'Failed'}), 500
 
-# ----------------------------------------------------------------------------
+# ============================================================================
 # Error Handlers
-# ----------------------------------------------------------------------------
+# ============================================================================
+
 @app.errorhandler(413)
 def too_large(e):  # pragma: no cover
     return jsonify({'error': 'File too large (max 50MB)'}), 413
@@ -444,4 +485,4 @@ def internal_error(e):  # pragma: no cover
 if __name__ == '__main__':  # pragma: no cover
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=True)

@@ -1,0 +1,16 @@
+SOURCE: Agmarknet
+TITLE: Sugarcane Market Prices and Trends
+URL: https://agmarknet.gov.in/
+WORD COUNT: 50
+
+================================================================================
+
+
+            Note: Real-time market data requires API integration.
+            General market information for sugarcane:
+            - Fair and Remunerative Price (FRP) is set by Government of India
+            - State Advised Prices (SAP) vary by state
+            - Prices depend on sugar recovery rate
+            - Payment timeline is typically 14 days from delivery
+            - Market influenced by sugar production, ethanol demand, and export policies
+            

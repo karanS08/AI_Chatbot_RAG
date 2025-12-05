@@ -1,0 +1,203 @@
+SOURCE: Curated Content
+TITLE: Sugarcane Disease Identification and Management Guide
+URL: curated
+WORD COUNT: 900
+
+================================================================================
+
+
+COMPLETE DISEASE MANAGEMENT GUIDE FOR SUGARCANE
+
+I. FUNGAL DISEASES
+
+1. RED ROT (Colletotrichum falcatum)
+Symptoms:
+- Reddening of internal stem tissues
+- Whitish patches with red margins inside stem
+- Drying of leaves from margins
+- Sour smell from affected stems
+
+Identification:
+- Split the cane lengthwise
+- Look for red discoloration with white patches
+- Check for crosswise bands in affected portion
+
+Management:
+- Grow resistant varieties: CO 0238, CO 94012, CoJ 88
+- Use disease-free seed material
+- Hot water treatment of setts (52°C for 30 minutes)
+- Crop rotation with non-host crops
+- Remove and burn affected plants
+- Avoid waterlogging
+- Balanced fertilization
+
+2. SMUT (Sporisorium scitamineum)
+Symptoms:
+- Long whip-like structure emerges from shoot tip
+- Black powdery spore mass covers the whip
+- Affected shoots don't develop into canes
+
+Identification:
+- Characteristic whip structure (1-2 meters)
+- Black spore covering (easily rubs off)
+- Usually appears in 3-5 month old crop
+
+Management:
+- Plant resistant varieties
+- Rogue out affected plants immediately before spores disperse
+- Dip seed material in Carbendazim solution
+- Avoid using seed from infected fields
+- Maintain field sanitation
+
+3. WILT (Fusarium sacchari / Ceratocystis paradoxa)
+Symptoms:
+- Yellowing of leaves
+- Wilting during hot hours
+- Bunching of leaves
+- Internal reddening of stems
+- Plant death in severe cases
+
+Management:
+- Use healthy seed material
+- Treat setts with fungicide
+- Improve soil drainage
+- Crop rotation
+- Remove and destroy affected plants
+- Avoid injuries to roots during cultivation
+
+4. RUST (Puccinia melanocephala)
+Symptoms:
+- Small elongated yellow spots on leaves
+- Develop into brown pustules
+- Severe infection causes leaf drying
+
+Management:
+- Grow resistant varieties
+- Remove affected leaves in early stage
+- Spray Mancozeb or Propiconazole
+- Ensure proper spacing for air circulation
+- Balanced nutrition
+
+II. BACTERIAL DISEASES
+
+1. BACTERIAL LEAF SCORCH (Xanthomonas albilineans)
+Symptoms:
+- White to yellowish stripes on leaves
+- Leaf margins become necrotic
+- Stunted growth
+
+Management:
+- Use healthy planting material
+- Hot water treatment of setts
+- Remove affected plants
+- Avoid mechanical injuries
+- Use resistant varieties
+
+2. GUMMING DISEASE (Xanthomonas axonopodis)
+Symptoms:
+- Bacterial ooze from stem
+- Yellowing of leaves
+- Stunted growth
+
+Management:
+- Field sanitation
+- Use disease-free seed
+- Spray copper-based bactericides
+
+III. VIRAL DISEASES
+
+1. MOSAIC (Sugarcane Mosaic Virus)
+Symptoms:
+- Light and dark green mosaic pattern on leaves
+- Stunted growth
+- Reduced yield
+
+Management:
+- Use virus-free seed material
+- Control aphid vectors
+- Remove affected plants early
+- Grow resistant varieties
+
+2. YELLOW LEAF DISEASE (Sugarcane Yellow Leaf Virus)
+Symptoms:
+- Yellowing of midrib and leaf
+- Necrosis in severe cases
+
+Management:
+- Use healthy seed material
+- Control aphid vectors
+- Tissue culture propagation
+
+IV. NEMATODE PROBLEMS
+
+1. ROOT KNOT NEMATODE
+Symptoms:
+- Galls on roots
+- Stunted growth
+- Yellowing
+
+Management:
+- Crop rotation with non-host
+- Nematicide application
+- Use resistant varieties
+- Improve soil health
+
+V. INTEGRATED DISEASE MANAGEMENT
+
+Prevention Strategies:
+1. Seed Selection and Treatment
+   - Use certified disease-free seed
+   - Hot water treatment (52°C, 30 min)
+   - Fungicide treatment: Carbendazim @ 0.2%
+
+2. Cultural Practices
+   - Crop rotation (3-4 year cycle)
+   - Maintain field hygiene
+   - Proper spacing (90-100 cm)
+   - Timely weeding
+   - Balanced fertilization
+   - Adequate drainage
+
+3. Resistant Varieties
+   - Choose location-specific resistant varieties
+   - Rotate varieties every 5-7 years
+   - Monitor new releases from research stations
+
+4. Monitoring and Scouting
+   - Regular field inspection
+   - Early detection of symptoms
+   - Immediate removal of diseased plants
+   - Record keeping of disease incidence
+
+5. Chemical Control (When Necessary)
+   Fungicides:
+   - Carbendazim 50% WP @ 0.2%
+   - Mancozeb 75% WP @ 0.25%
+   - Propiconazole 25% EC @ 0.1%
+   
+   Bactericides:
+   - Copper Oxychloride @ 0.25%
+   - Streptocycline @ 500 ppm
+
+6. Biological Control
+   - Trichoderma viride (seed treatment, soil application)
+   - Pseudomonas fluorescens
+   - VAM fungi for root health
+
+VI. DISEASE SURVEILLANCE SCHEDULE
+
+Monthly monitoring checklist:
+Month 1-2: Watch for seed-borne diseases
+Month 3-4: Scout for smut, early wilt symptoms
+Month 5-7: Check for red rot, rust, pests
+Month 8-10: Monitor maturity diseases, ratoon health
+Month 11-12: Pre-harvest assessment
+
+EMERGENCY RESPONSE:
+- Suspected Red Rot: Immediate roguing, increase gap inspection
+- Smut outbreak: Mass removal before spore dispersal
+- Wilt patches: Improve drainage, apply biocontrol agents
+- Rust epidemic: Emergency fungicide spray
+
+Remember: Prevention is better than cure. Invest in quality seed material and follow good agricultural practices.
+            

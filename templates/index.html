@@ -12,6 +12,27 @@
 </head>
 
 <body>
+    <!-- Walkthrough Overlay -->
+    <div id="walkthroughOverlay" class="walkthrough-overlay" style="display:none;">
+        <div class="walkthrough-backdrop"></div>
+        <div class="walkthrough-spotlight" id="walkthroughSpotlight"></div>
+        <div class="walkthrough-tooltip" id="walkthroughTooltip">
+            <div class="tooltip-content">
+                <h3 id="tooltipTitle"></h3>
+                <p id="tooltipText"></p>
+                <div class="tooltip-footer">
+                    <button id="skipWalkthrough" class="tooltip-btn secondary">Skip</button>
+                    <div class="tooltip-progress">
+                        <span id="walkthroughProgress">1/5</span>
+                    </div>
+                    <button id="nextWalkthrough" class="tooltip-btn primary">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welcome Screen has been moved into the chat column -->
+
     <div class="app-shell">
         <header class="app-header">
             <div class="header-left">
@@ -39,6 +60,7 @@
                     <option value="assamese">অসমীয়া (Assamese)</option>
                     <option value="urdu">اردو (Urdu)</option>
                 </select>
+                <button id="restartTourBtn" class="icon-btn" title="Restart Tour">🎯</button>
                 <button id="helpBtn" class="icon-btn" title="Help">❓</button>
                 <button id="classifyPlantBtn" class="icon-btn" title="Identify plant">🌿</button>
                 <button id="darkModeToggle" class="icon-btn" title="Toggle dark mode">🌙</button>
@@ -64,6 +86,49 @@
             </aside>
 
             <section class="chat-column">
+                <div id="chatWelcome" class="chat-welcome">
+                    <div class="welcome-header">
+                        <h1>Welcome to Sugarcane Advisor</h1>
+                        <p>Your AI-powered farming assistant</p>
+                    </div>
+                    <div class="suggested-questions">
+                        <h3>Try asking about:</h3>
+                        <div class="question-grid">
+                            <button class="suggestion-card" data-question="What are the best sugarcane varieties for my region?">
+                                <span class="suggestion-icon">🌱</span>
+                                <span class="suggestion-text">Best varieties for my region</span>
+                            </button>
+                            <button class="suggestion-card" data-question="How do I identify and treat red rot disease?">
+                                <span class="suggestion-icon">🦠</span>
+                                <span class="suggestion-text">Disease identification</span>
+                            </button>
+                            <button class="suggestion-card" data-question="What is the fertilizer schedule for sugarcane?">
+                                <span class="suggestion-icon">💧</span>
+                                <span class="suggestion-text">Fertilizer schedule</span>
+                            </button>
+                            <button class="suggestion-card" data-question="Tell me about irrigation methods for sugarcane">
+                                <span class="suggestion-icon">🚜</span>
+                                <span class="suggestion-text">Irrigation methods</span>
+                            </button>
+                            <button class="suggestion-card" data-question="How to manage pests in sugarcane?">
+                                <span class="suggestion-icon">🐛</span>
+                                <span class="suggestion-text">Pest management</span>
+                            </button>
+                            <button class="suggestion-card" data-question="What government schemes are available for sugarcane farmers?">
+                                <span class="suggestion-icon">🏛️</span>
+                                <span class="suggestion-text">Government schemes</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="welcome-actions">
+                        <button id="startWalkthroughBtn" class="welcome-btn secondary">
+                            <span>🎯</span> Take a Quick Tour
+                        </button>
+                        <button id="skipWelcomeBtn" class="welcome-btn secondary" style="display: none;">
+                            <span>→</span> Start Chatting
+                        </button>
+                    </div>
+                </div>
                 <div id="chatbox" class="chatbox" aria-live="polite"></div>
                 <div id="loadingIndicator" class="loading-indicator" aria-hidden="true" style="display:none;"><span class="spinner"></span><span>Thinking...</span></div>
             </section>

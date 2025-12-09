@@ -61,6 +61,21 @@ LANGUAGE_NAMES = {
     'urdu': 'Urdu (اردو)'
 }
 
+# Infographic generation control
+# Trigger words that explicitly request an infographic/visual
+TRIGGER_WORDS = {
+    'infographic', 'visual', 'diagram', 'chart', 'show me', 'picture', 'image',
+    'visualize', 'timeline', 'steps', 'step by step', 'schedule', 'compare', 'comparison'
+}
+
+# Cooldown (seconds) to avoid regenerating identical infographics too often.
+# Default 24 hours; override with env INFOGRAPHIC_COOLDOWN_SECONDS
+COOLDOWN_SECONDS = int(os.getenv('INFOGRAPHIC_COOLDOWN_SECONDS', '86400'))
+
+# File to persist last-generation timestamps (simple rate-limiter)
+_INFOGRAPHIC_COOLDOWN_FILE = os.path.join(UPLOAD_FOLDER, 'infographic_cooldown.json')
+
+
 
 def classify_query_type(question: str) -> Dict[str, Any]:
     """
@@ -470,12 +485,14 @@ def decide_make_infographic(content: str, original_question: str = '') -> Dict[s
     logger.info("🕵️ Starting infographic decision logic...")
     logger.info(f"   Question preview: '{original_question[:100]}...'")
     
-    # Primary trigger: if the user explicitly asks for an image
-    if "generate image" in original_question.lower():
-        logger.info("✅ TRIGGER FOUND: User explicitly requested an image.")
+    # Primary trigger: only generate if the user explicitly used the word 'create'
+    # This enforces the policy: images are produced ONLY when the user requests CREATE.
+    oq = (original_question or '')
+    if re.search(r'\bcreate\b', oq, re.IGNORECASE):
+        logger.info("✅ TRIGGER FOUND: 'create' detected in user question — will generate infographic.")
         return {
             'make': True,
-            'reason': 'User requested an infographic.',
+            'reason': "User requested 'create' in the question.",
             'style': 'detailed'
         }
 
@@ -484,39 +501,9 @@ def decide_make_infographic(content: str, original_question: str = '') -> Dict[s
         logger.warning("⚠️ AI client not available for decision")
         return {'make': False, 'reason': 'AI unavailable', 'style': 'simple'}
     
-    # Ask Gemini for decision
-    prompt = (
-        "You are a concise assistant that decides whether a small infographic (SVG) "
-        "would help make this information easier to understand for a smallholder farmer. "
-        "Return ONLY JSON: {\n"
-        "  \"make_infographic\": true|false,\n"
-        "  \"reason\": \"short rationale\",\n"
-        "  \"style\": \"simple|chart|timeline\"\n}\n"
-        "Content:\n" + content
-    )
-    
-    try:
-        resp = CLIENT.models.generate_content(model='gemini-3-pro-preview', contents=prompt)
-        parsed = _parse_json_from_text(resp.text or '')
-        
-        if parsed:
-            final_decision = {
-                'make': bool(parsed.get('make_infographic')),
-                'reason': parsed.get('reason', ''),
-                'style': parsed.get('style', 'simple')
-            }
-            
-            if final_decision['make']:
-                logger.info(f"✅ AI decided to generate: {final_decision['reason']}")
-            else:
-                logger.info(f"❌ AI decided not to generate: {final_decision['reason']}")
-            
-            return final_decision
-    except Exception as e:
-        logger.error(f'❌ AI decision call failed: {e}')
-    
-    logger.info("➡️ Decision: Do NOT generate (default)")
-    return {'make': False, 'reason': 'default', 'style': 'simple'}
+    # If 'create' not present, do not generate an infographic by default.
+    logger.info("➡️ Decision: 'create' not found — Do NOT generate infographic")
+    return {'make': False, 'reason': "'create' not present", 'style': 'simple'}
 
 
 def generate_svg_infographic(content: str, style: str = 'simple') -> Optional[str]:
@@ -571,7 +558,57 @@ def generate_svg_infographic(content: str, style: str = 'simple') -> Optional[st
     return None
 
 
-def generate_infographic_image(content: str, topic: str, language: str = 'english') -> Optional[str]:
+# -----------------------------
+# Cooldown helpers for infographics
+# -----------------------------
+def _infographic_key_for_topic(topic: str) -> str:
+    """Build a stable key for cooldown from topic string."""
+    import hashlib
+    if not topic:
+        topic = 'general'
+    return hashlib.sha256(topic.encode('utf-8')).hexdigest()
+
+
+def _load_cooldown_map() -> Dict[str, int]:
+    try:
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        if os.path.exists(_INFOGRAPHIC_COOLDOWN_FILE):
+            with open(_INFOGRAPHIC_COOLDOWN_FILE, 'r', encoding='utf-8') as fh:
+                return json.load(fh)
+    except Exception:
+        pass
+    return {}
+
+
+def _save_cooldown_map(m: Dict[str, int]):
+    try:
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        with open(_INFOGRAPHIC_COOLDOWN_FILE, 'w', encoding='utf-8') as fh:
+            json.dump(m, fh)
+    except Exception:
+        logger.debug('⚠️ Failed to persist infographic cooldown map')
+
+
+def _infographic_is_on_cooldown(topic: str) -> bool:
+    key = _infographic_key_for_topic(topic)
+    m = _load_cooldown_map()
+    ts = m.get(key)
+    if not ts:
+        return False
+    try:
+        return (int(time.time()) - int(ts)) < COOLDOWN_SECONDS
+    except Exception:
+        return False
+
+
+def _infographic_update_cooldown(topic: str):
+    key = _infographic_key_for_topic(topic)
+    m = _load_cooldown_map()
+    m[key] = int(time.time())
+    _save_cooldown_map(m)
+
+
+def generate_infographic_image(content: str, topic: str, language: str = 'english', force: bool = False) -> Optional[str]:
     """
     Generate an infographic using Gemini 3 Pro Image with Google Search grounding.
     
@@ -610,6 +647,18 @@ def generate_infographic_image(content: str, topic: str, language: str = 'englis
         f"Context information:\n{content[:500] if content else 'General agricultural topic'}"
     )
     
+    # If not forced, avoid regenerating very similar infographics too often
+    try:
+        if not force:
+            # If topic contains explicit trigger words, ignore cooldown
+            if not any(tok in (topic or '').lower() for tok in TRIGGER_WORDS):
+                if _infographic_is_on_cooldown(topic):
+                    logger.info('⏳ Skipping infographic generation due to cooldown')
+                    return None
+
+    except Exception as e:
+        logger.debug(f'⚠️ Cooldown check failed: {e}')
+
     try:
         # Create output directory for generated infographics
         output_dir = os.path.join(UPLOAD_FOLDER, 'generated_infographics')
@@ -661,6 +710,12 @@ def generate_infographic_image(content: str, topic: str, language: str = 'englis
         logger.info(f"🎨 Generated using Gemini 3 Pro Image (4K resolution, {lang_name})")
         
         # Return relative path for URL
+        try:
+            # Update cooldown timestamp for this topic so we don't regen immediately
+            _infographic_update_cooldown(topic)
+        except Exception:
+            logger.debug('⚠️ Failed to update infographic cooldown')
+
         return f"generated_infographics/{filename}"
         
     except Exception as e:

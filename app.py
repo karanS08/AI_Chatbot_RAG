@@ -214,10 +214,15 @@ def ask():
             'classification_reason': classification.get('reason', '')
         }
         
-        # If visual format, tell frontend to request infographic separately
-        if response_format == 'visual' and confidence >= 0.6:
+        # Only create an infographic if the user explicitly requested it using the word 'create'
+        has_create = bool(re.search(r'\bcreate\b', question or '', re.IGNORECASE))
+        if has_create:
             result['infographic_pending'] = True
-            logger.info(f"📝 [STEP 3] Returning text immediately, infographic will be generated separately")
+            logger.info("📝 [STEP 3] User asked to 'create' — marking infographic as pending")
+        else:
+            # Otherwise only give text
+            result['infographic_pending'] = False
+            logger.info("📝 [STEP 3] Not creating infographic (no 'create' trigger present)")
         
         logger.info(f"✅ Returning response (format: {response_format})")
         return jsonify(result), 200
@@ -241,6 +246,7 @@ def generate_infographic():
     question = (request.json.get('question', '') or '').strip()
     content = (request.json.get('content', '') or '').strip()
     lang = request.json.get('language', 'english').lower()
+    force = bool(request.json.get('force', False))
     
     if not question:
         return jsonify({'error': 'Question cannot be empty'}), 400
@@ -248,10 +254,23 @@ def generate_infographic():
     logger.info(f"🎨 Generating infographic for: '{question[:50]}...' in {lang}")
     
     try:
+        # If not forced, check cooldown and trigger words to avoid unnecessary API calls
+        try:
+            on_cooldown = ai_services._infographic_is_on_cooldown(question)
+            has_create = bool(re.search(r'\bcreate\b', question or '', re.IGNORECASE))
+        except Exception:
+            on_cooldown = False
+            has_create = False
+
+        if on_cooldown and not force and not has_create:
+            logger.info('⏳ Infographic generation skipped: cooldown active')
+            return jsonify({'error': 'Infographic generation skipped due to recent similar generation', 'success': False, 'reason': 'cooldown'}), 429
+
         image_path = ai_services.generate_infographic_image(
             content=content,
             topic=question,
-            language=lang
+            language=lang,
+            force=force
         )
         
         if image_path:

@@ -1,5 +1,40 @@
-// Extracted from templates/index.html <script> block
-// The file expects `marked` to be loaded (CDN) before this script runs.
+/**
+ * Sugarcane Advisor - Frontend Application
+ * =========================================
+ *
+ * Main JavaScript application for the Agricultural Advisory Chatbot.
+ * Provides an interactive, farmer-friendly interface for AI-powered
+ * agricultural assistance.
+ *
+ * Features:
+ * - Real-time chat with AI assistant
+ * - Multi-language support (14 Indian languages)
+ * - Voice input (speech recognition)
+ * - Voice output (text-to-speech)
+ * - Image upload for crop disease analysis
+ * - Document upload for knowledge base
+ * - Plant classification (sugarcane/weed)
+ * - Dynamic infographic generation
+ * - Dark mode support
+ * - Mobile-responsive UI
+ * - Interactive walkthrough tour
+ *
+ * Dependencies:
+ * - marked.js (Markdown rendering, loaded via CDN)
+ * - Web Speech API (voice features)
+ *
+ * API Endpoints Used:
+ * - POST /ask - RAG-powered Q&A
+ * - POST /upload - Document upload
+ * - POST /scan-image - Crop disease analysis
+ * - POST /classify-plant - Plant classification
+ * - POST /generate-infographic - Async infographic generation
+ * - POST /get-text-version - Text fallback for infographics
+ *
+ * @author Shashank Tamaskar
+ * @version 2.0
+ */
+
 
 // Utility: Add message to chat
 // Enhanced to support infographic display with text fallback option
@@ -518,7 +553,8 @@ let currentUtterance = null;
 let lastBotMessage = "";
 let attachedImageFile = null; // Store attached image
 // Feature flag: temporarily disable image/camera/file upload features
-const IMAGE_ENABLED = false; // set false to disable image functionality temporarily
+// Feature flag: enable image/camera/file upload features
+const IMAGE_ENABLED = true; // Enabled for full functionality
 
 // Utility: Clear chat
 function clearChat() {

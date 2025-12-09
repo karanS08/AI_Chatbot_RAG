@@ -1,28 +1,65 @@
-"""Agricultural advisory Flask app: chat (RAG), image scan, plant classification.
-Main Flask application with routes and error handlers.
-AI functions are delegated to ai_services module for clean separation of concerns.
+"""
+Agricultural Advisory Flask Application
+========================================
+
+A comprehensive Flask web application providing AI-powered agricultural advisory
+services for sugarcane farmers in India. Features include:
+
+- **RAG-based Q&A**: Retrieval-Augmented Generation using Gemini AI with a
+  knowledge base of agricultural documents
+- **Image Analysis**: Crop disease identification and plant classification
+- **Multi-language Support**: 14 Indian languages including Hindi, Tamil, Telugu, etc.
+- **Infographic Generation**: Automatic visual response generation for how-to queries
+- **Voice Input/Output**: Speech recognition and text-to-speech capabilities
+
+Architecture:
+    - Flask serves as the web framework
+    - AI functions are delegated to ai_services module for separation of concerns
+    - Gemini API provides LLM and vision capabilities
+    - File search store enables RAG functionality
+
+Routes:
+    - / : Main application UI
+    - /ask : RAG-powered Q&A endpoint
+    - /upload : Document upload for knowledge base
+    - /scan-image : Crop disease analysis
+    - /classify-plant : Plant classification (sugarcane/weed)
+    - /generate-infographic : Async infographic generation
+    - /webhook : Alternative chat endpoint for webhooks
+
+Author: Shashank Tamaskar
+Version: 2.0
 """
 from __future__ import annotations
 
-import os, json, re, logging
-from typing import Optional
+# Standard library imports
+import json
+import logging
+import os
+import re
 from io import BytesIO
+from typing import Optional
 
-from flask import Flask, render_template, request, jsonify, send_from_directory
-from flask_cors import CORS
-from werkzeug.utils import secure_filename
+# Third-party imports
 from dotenv import load_dotenv
+from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
 from PIL import Image
+from werkzeug.utils import secure_filename
 
+# Google Gemini AI imports
 from google import genai
 from google.genai import types
 
-# Import AI services module
+# Local application imports
 import ai_services
 
+# Load environment variables from .env file
 load_dotenv()
 
-# Configure logging to write to both console and file
+# ============================================================================
+# Logging Configuration
+# ============================================================================
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -190,7 +227,7 @@ def ask():
         logger.info("🤖 [STEP 2] Generating text response with RAG...")
         store = ai_services.ensure_file_search_store()
         
-        model_name = 'gemini-3-pro-preview'
+        model_name = 'gemini-2.5-flash-lite'
         resp = client.models.generate_content(
             model=model_name,
             contents=f'{instruction}\n\nUser Question: {question}',
@@ -214,15 +251,22 @@ def ask():
             'classification_reason': classification.get('reason', '')
         }
         
-        # Only create an infographic if the user explicitly requested it using the word 'create'
+        # Generate infographic if:
+        # 1. User explicitly requested it using the word 'create', OR
+        # 2. Query is classified as 'visual' with confidence >= 0.7 (how-to, schedules, symptoms, etc.)
         has_create = bool(re.search(r'\bcreate\b', question or '', re.IGNORECASE))
-        if has_create:
+        is_visual_query = response_format == 'visual' and confidence >= 0.7
+        
+        if has_create or is_visual_query:
             result['infographic_pending'] = True
-            logger.info("📝 [STEP 3] User asked to 'create' — marking infographic as pending")
+            if has_create:
+                logger.info("📝 [STEP 3] User asked to 'create' — marking infographic as pending")
+            else:
+                logger.info(f"📝 [STEP 3] Query classified as VISUAL (confidence: {confidence:.2f}) — marking infographic as pending")
         else:
-            # Otherwise only give text
+            # Text-only response for greetings, simple questions, etc.
             result['infographic_pending'] = False
-            logger.info("📝 [STEP 3] Not creating infographic (no 'create' trigger present)")
+            logger.info(f"📝 [STEP 3] Text-only response (format: {response_format}, confidence: {confidence:.2f})")
         
         logger.info(f"✅ Returning response (format: {response_format})")
         return jsonify(result), 200
@@ -313,7 +357,7 @@ def get_text_version():
     try:
         store = ai_services.ensure_file_search_store()
         resp = client.models.generate_content(
-            model='gemini-3-pro-preview',
+            model='gemini-2.5-flash-lite',
             contents=f'{instruction}\n\nUser Question: {question}',
             config=types.GenerateContentConfig(
                 tools=[types.Tool(file_search=types.FileSearch(file_search_store_names=[store.name]))]
@@ -368,7 +412,7 @@ def scan_image():
     try:
         store = ai_services.ensure_file_search_store()
         resp = client.models.generate_content(
-            model='gemini-3-pro-preview',
+            model='gemini-2.5-flash-lite',
             contents=[types.Content(parts=[
                 types.Part(text=prompt),
                 types.Part(inline_data=types.Blob(mime_type=image_file.content_type or 'image/jpeg', data=img_bytes))
@@ -417,7 +461,7 @@ def scan_image():
         retry_prompt = prompt + '\nRe-check subtle early-stage issues; add at least one recommendation if appropriate. Do NOT invent diseases.'
         try:
             retry = client.models.generate_content(
-                model='gemini-3-pro-preview',
+                model='gemini-2.5-flash-lite',
                 contents=[types.Content(parts=[
                     types.Part(text=retry_prompt),
                     types.Part(inline_data=types.Blob(mime_type=image_file.content_type or 'image/jpeg', data=img_bytes))
@@ -479,7 +523,7 @@ def classify_plant():
     parts.append(types.Part(text='[QUERY IMAGE]'))
     parts.append(types.Part(inline_data=types.Blob(mime_type=image_file.content_type or 'image/jpeg', data=image_bytes)))
     resp = client.models.generate_content(
-        model='gemini-3-pro-preview',
+        model='gemini-2.5-flash-lite',
         contents=[types.Content(parts=parts)],
         config=types.GenerateContentConfig(
             # Use default settings; reasoning-level option removed for compatibility
@@ -527,7 +571,7 @@ def webhook():
     try:
         store = ai_services.ensure_file_search_store()
         resp = client.models.generate_content(
-            model='gemini-3-pro-preview',
+            model='gemini-2.5-flash-lite',
             contents=f'{instruction}\n\nUser Chat: {chat_text}',
             config=types.GenerateContentConfig(
                 tools=[types.Tool(file_search=types.FileSearch(file_search_store_names=[store.name]))]

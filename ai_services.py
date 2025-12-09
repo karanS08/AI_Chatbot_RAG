@@ -1,32 +1,59 @@
 """
-AI Services Module - Centralized AI function management
+AI Services Module - Centralized AI Function Management
+========================================================
 
-This module contains all AI-related functions for the agricultural advisory chatbot:
-- RAG (file search store) management
-- Knowledge base initialization and file uploads
-- AI decision logic for infographic generation
-- Infographic generation (SVG and image formats)
+This module provides all AI-related functionality for the agricultural advisory
+chatbot, implementing a clean separation of concerns from the Flask application.
 
-All functions interact with the Gemini client and are designed to be imported
-and used by the Flask app.
+Core Services:
+    1. **RAG Management**: File search store creation, persistence, and query handling
+    2. **Knowledge Base**: Automatic document upload, hash-based deduplication,
+       parallel file uploading for faster initialization
+    3. **Query Classification**: AI-powered analysis to determine optimal response
+       format (visual vs. text) based on query type
+    4. **Infographic Generation**: Dynamic visual content creation using Gemini 3
+       Pro Image with Google Search grounding for real-time data
+    5. **Reference Image Loading**: Support for plant classification with
+       reference images for sugarcane and weed identification
+
+Functions:
+    - set_client_and_app(): Initialize module with Gemini client and Flask app
+    - ensure_file_search_store(): Create or reuse RAG file search store
+    - upload_file_to_store(): Upload documents with deduplication
+    - initialize_knowledge_base(): Bulk upload knowledge base on startup
+    - classify_query_type(): Determine if query needs visual or text response
+    - generate_infographic_image(): Create infographics using Gemini 3 Pro Image
+    - decide_make_infographic(): Logic to determine if infographic is needed
+    - parse_json_from_text(): Robust JSON parsing from LLM output
+
+Configuration:
+    The module uses environment variables and module-level constants:
+    - INFOGRAPHIC_COOLDOWN_SECONDS: Rate limiting for infographic generation
+    - UPLOAD_FOLDER: Directory for file uploads and generated content
+
+Author: Shashank Tamaskar
+Version: 2.0
 """
-
-import os
-import time
-import json
-import re
+# Standard library imports
+import concurrent.futures
 import glob
-import io
-import logging
 import hashlib
-from typing import List, Dict, Any, Optional
+import io
+import json
+import logging
+import os
+import re
+import time
 from datetime import datetime
 from io import BytesIO
-import concurrent.futures
+from typing import Any, Dict, List, Optional
 
+# Third-party imports
+from PIL import Image
+
+# Google Gemini AI imports
 from google import genai
 from google.genai import types
-from PIL import Image
 
 # ============================================================================
 # MODULE-LEVEL CONFIGURATION
@@ -145,7 +172,7 @@ Respond ONLY with JSON:
 
     try:
         resp = CLIENT.models.generate_content(
-            model='gemini-3-pro-preview',
+            model='gemini-2.5-flash-lite',
             contents=prompt.format(question=question)
         )
         
@@ -483,27 +510,51 @@ def decide_make_infographic(content: str, original_question: str = '') -> Dict[s
         - style (str): Suggested style ('simple', 'chart', 'timeline')
     """
     logger.info("🕵️ Starting infographic decision logic...")
-    logger.info(f"   Question preview: '{original_question[:100]}...'")
+    oq = (original_question or '').lower()
+    logger.info(f"   Question preview: '{oq[:100]}...'")
     
-    # Primary trigger: only generate if the user explicitly used the word 'create'
-    # This enforces the policy: images are produced ONLY when the user requests CREATE.
-    oq = (original_question or '')
+    # Trigger 1: User explicitly used the word 'create'
     if re.search(r'\bcreate\b', oq, re.IGNORECASE):
-        logger.info("✅ TRIGGER FOUND: 'create' detected in user question — will generate infographic.")
+        logger.info("✅ TRIGGER FOUND: 'create' detected — will generate infographic.")
         return {
             'make': True,
             'reason': "User requested 'create' in the question.",
             'style': 'detailed'
         }
+    
+    # Trigger 2: Visual keywords that benefit from infographics
+    visual_keywords = [
+        'steps', 'step by step', 'how to', 'how do i', 'procedure', 'process',
+        'schedule', 'calendar', 'timeline', 'when to',
+        'symptoms', 'identify', 'signs of', 'disease', 'pest',
+        'compare', 'comparison', 'difference between', 'vs',
+        'diagram', 'chart', 'infographic', 'visual', 'show me'
+    ]
+    
+    for keyword in visual_keywords:
+        if keyword in oq:
+            logger.info(f"✅ TRIGGER FOUND: Visual keyword '{keyword}' detected — will generate infographic.")
+            # Determine style based on keyword
+            if keyword in ['schedule', 'calendar', 'timeline', 'when to']:
+                style = 'timeline'
+            elif keyword in ['compare', 'comparison', 'difference between', 'vs']:
+                style = 'chart'
+            else:
+                style = 'detailed'
+            return {
+                'make': True,
+                'reason': f"Visual keyword '{keyword}' detected.",
+                'style': style
+            }
 
     # If no client, skip AI decision
     if CLIENT is None:
         logger.warning("⚠️ AI client not available for decision")
         return {'make': False, 'reason': 'AI unavailable', 'style': 'simple'}
     
-    # If 'create' not present, do not generate an infographic by default.
-    logger.info("➡️ Decision: 'create' not found — Do NOT generate infographic")
-    return {'make': False, 'reason': "'create' not present", 'style': 'simple'}
+    # No triggers found - text-only response
+    logger.info("➡️ Decision: No visual triggers found — text-only response")
+    return {'make': False, 'reason': "No visual triggers present", 'style': 'simple'}
 
 
 def generate_svg_infographic(content: str, style: str = 'simple') -> Optional[str]:
@@ -530,7 +581,7 @@ def generate_svg_infographic(content: str, style: str = 'simple') -> Optional[st
     
     try:
         logger.info("🎨 Generating SVG infographic...")
-        resp = CLIENT.models.generate_content(model='gemini-3-pro-preview', contents=prompt)
+        resp = CLIENT.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
         raw = resp.text or ''
         
         # Try to extract fenced SVG first
